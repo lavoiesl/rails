@@ -1494,9 +1494,9 @@ module ActiveRecord
       @arel ||= build_arel(aliases)
     end
 
-    def construct_join_dependency(associations, join_type) # :nodoc:
+    def construct_join_dependency(associations, join_type, where_clause = Relation::WhereClause.new([])) # :nodoc:
       ActiveRecord::Associations::JoinDependency.new(
-        klass, table, associations, join_type
+        klass, table, associations, join_type, where_clause,
       )
     end
 
@@ -1570,7 +1570,7 @@ module ActiveRecord
 
         join_dependencies = []
         join_dependencies.unshift construct_join_dependency(
-          select_named_joins(joins, join_dependencies), nil
+          select_named_joins(joins, join_dependencies), nil, where_clause
         )
       end
 
@@ -1672,7 +1672,7 @@ module ActiveRecord
             buckets[:stashed_join] = stashed_left_joins
             return buckets, Arel::Nodes::OuterJoin
           else
-            stashed_left_joins.unshift construct_join_dependency(left_joins, Arel::Nodes::OuterJoin)
+            stashed_left_joins.unshift construct_join_dependency(left_joins, Arel::Nodes::OuterJoin, where_clause)
           end
         end
 
@@ -1724,7 +1724,7 @@ module ActiveRecord
 
         unless named_joins.empty? && stashed_joins.empty?
           alias_tracker = alias_tracker(leading_joins + join_nodes, aliases)
-          join_dependency = construct_join_dependency(named_joins, join_type)
+          join_dependency = construct_join_dependency(named_joins, join_type, where_clause)
           join_sources.concat(join_dependency.join_constraints(stashed_joins, alias_tracker, references_values))
         end
 

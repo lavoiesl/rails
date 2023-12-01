@@ -329,6 +329,16 @@ class AssociationsJoinModelTest < ActiveRecord::TestCase
     assert_equal [authors(:david), authors(:bob)], posts(:thinking).authors_using_custom_pk.order("authors.id")
   end
 
+  def test_belongs_to_polymorphic_join
+    assert_raise(ActiveRecord::EagerLoadPolymorphicError) do
+      Comment.joins(:author).to_a
+    end
+  end
+
+  def test_belongs_to_polymorphic_join_where_type
+    Comment.joins(:author).where(author_type: "Author").to_a
+  end
+
   def test_belongs_to_polymorphic_with_counter_cache
     assert_equal 1, posts(:welcome)[:tags_count]
     tagging = posts(:welcome).taggings.create(tag: tags(:general))
@@ -364,10 +374,6 @@ class AssociationsJoinModelTest < ActiveRecord::TestCase
 
     assert_raise ActiveRecord::HasManyThroughAssociationPolymorphicThroughError do
       taggings(:welcome_general).things
-    end
-
-    assert_raise ActiveRecord::EagerLoadPolymorphicError do
-      tags(:general).taggings.includes(:taggable).where("bogus_table.column = 1").references(:bogus_table).to_a
     end
   end
 

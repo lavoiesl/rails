@@ -460,7 +460,7 @@ module ActiveRecord
     # Active Record class.
     class AssociationReflection < MacroReflection # :nodoc:
       def compute_class(name)
-        if polymorphic?
+        if polymorphic? && name != @class_name
           raise ArgumentError, "Polymorphic associations do not support computing the class."
         end
 
