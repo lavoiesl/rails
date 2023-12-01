@@ -68,9 +68,9 @@ module ActiveRecord
         end
       end
 
-      def initialize(base, table, associations, join_type)
+      def initialize(base, table, associations, join_type, where_clause)
         tree = self.class.make_tree associations
-        @join_root = JoinBase.new(base, table, build(tree, base))
+        @join_root = JoinBase.new(base, table, build(tree, base, where_clause))
         @join_type = join_type
       end
 
@@ -225,17 +225,25 @@ module ActiveRecord
             raise(ConfigurationError, "Can't join '#{klass.name}' to association named '#{name}'; perhaps you misspelled it?")
         end
 
-        def build(associations, base_klass)
+        def build(associations, base_klass, where_clause)
           associations.map do |name, right|
             reflection = find_reflection base_klass, name
             reflection.check_validity!
             reflection.check_eager_loadable!
 
-            if reflection.polymorphic?
-              raise EagerLoadPolymorphicError.new(reflection)
+            klass = if reflection.polymorphic?
+              table_name = reflection.active_record.table_name
+              join_conditions = where_clause.to_h(table_name)
+              if (class_name = join_conditions[reflection.foreign_type])
+                class_name.constantize
+              else
+                raise EagerLoadPolymorphicError.new(reflection)
+              end
+            else
+              reflection.klass
             end
 
-            JoinAssociation.new(reflection, build(right, reflection.klass))
+            JoinAssociation.new(reflection, build(right, klass, where_clause))
           end
         end
 
